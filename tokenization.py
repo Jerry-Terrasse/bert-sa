@@ -72,6 +72,7 @@ def load_vocab(vocab_file):
 
 def convert_tokens_to_ids(vocab, tokens):
     """Converts a sequence of tokens into ids using the vocab."""
+    return list(map(lambda token: vocab[token], tokens))
     ids = []
     for token in tokens:
         ids.append(vocab[token])
@@ -125,16 +126,17 @@ class BasicTokenizer(object):
         """Tokenizes a piece of text."""
         if max_len:
             text = text[:max_len * 7]
-        text = convert_to_unicode(text)
-        text = self._clean_text(text)
+        # text = convert_to_unicode(text)
+        text = self._clean_text(text).lower()
         orig_tokens = whitespace_tokenize(text)
         if max_len is not None:
             orig_tokens = orig_tokens[:max_len]
+        return orig_tokens
         split_tokens = []
         for token in orig_tokens:
-            if self.do_lower_case:
-                token = token.lower()
-                token = self._run_strip_accents(token)
+            # if self.do_lower_case:
+            #     token = token.lower()
+            #     token = self._run_strip_accents(token)
             split_tokens.extend(self._run_split_on_punc(token))
 
         output_tokens = whitespace_tokenize(" ".join(split_tokens))
@@ -173,8 +175,7 @@ class BasicTokenizer(object):
     
     def _run_split_on_punc(self, text):
         """Splits punctuation on a piece of text."""
-        return [text]
-        chars_arr = np.fromiter(map(ord, text), dtype=np.int32)
+        chars_arr = np.fromiter(map(ord, text), dtype=np.int8)
         # if all alphabets
         assert self.do_lower_case
         if ((97 <= chars_arr) & (97 <= 122)).all():

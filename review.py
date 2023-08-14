@@ -46,7 +46,7 @@ class TomatoDataset(Dataset):
         self.mask_tensors = []
         tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
         self.tokenizer = tokenizer
-        for quote in tqdm(self.quotes[:10000]):
+        for quote in tqdm(self.quotes):
             tokens = ['[CLS]'] + tokenizer.tokenize(quote, max_len)
             if len(tokens) >= max_len:
                 tokens = tokens[:max_len]
@@ -59,7 +59,6 @@ class TomatoDataset(Dataset):
             mask = (tokens != self.tokenizer.vocab['[PAD]']).long()
             self.mask_tensors.append(mask)
         print('Done')
-        exit(0)
     
     def __len__(self):
         return len(self.data)
