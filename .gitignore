@@ -9,4 +9,9 @@ __pycache__
 *.bak
 .idea
 dstc7.egg-info/*
-*.ipynb
+
+# PyEnv
+.python-version
+
+# model
+*.pt
