@@ -10,6 +10,7 @@ import collections
 import unicodedata
 import six
 
+import numpy as np
 
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -94,11 +95,10 @@ class FullTokenizer(object):
         self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
         self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
-    def tokenize(self, text):
+    def tokenize(self, text, max_len: int = None):
         split_tokens = []
-        for token in self.basic_tokenizer.tokenize(text):
-            for sub_token in self.wordpiece_tokenizer.tokenize(token):
-                split_tokens.append(sub_token)
+        for token in self.basic_tokenizer.tokenize(text, max_len):
+            split_tokens.extend(self.wordpiece_tokenizer.tokenize(token))
 
         return split_tokens
 
@@ -121,11 +121,15 @@ class BasicTokenizer(object):
         """
         self.do_lower_case = do_lower_case
 
-    def tokenize(self, text):
+    def tokenize(self, text, max_len: int = None):
         """Tokenizes a piece of text."""
+        if max_len:
+            text = text[:max_len * 7]
         text = convert_to_unicode(text)
         text = self._clean_text(text)
         orig_tokens = whitespace_tokenize(text)
+        if max_len is not None:
+            orig_tokens = orig_tokens[:max_len]
         split_tokens = []
         for token in orig_tokens:
             if self.do_lower_case:
@@ -147,8 +151,34 @@ class BasicTokenizer(object):
             output.append(char)
         return "".join(output)
 
+    # def _run_split_on_punc(self, text):
+    #     """Splits punctuation on a piece of text."""
+    #     chars = list(text)
+    #     i = 0
+    #     start_new_word = True
+    #     output = []
+    #     while i < len(chars):
+    #         char = chars[i]
+    #         if _is_punctuation(char):
+    #             output.append([char])
+    #             start_new_word = True
+    #         else:
+    #             if start_new_word:
+    #                 output.append([])
+    #             start_new_word = False
+    #             output[-1].append(char)
+    #         i += 1
+
+    #     return ["".join(x) for x in output]
+    
     def _run_split_on_punc(self, text):
         """Splits punctuation on a piece of text."""
+        return [text]
+        chars_arr = np.fromiter(map(ord, text), dtype=np.int32)
+        # if all alphabets
+        assert self.do_lower_case
+        if ((97 <= chars_arr) & (97 <= 122)).all():
+            return [text]
         chars = list(text)
         i = 0
         start_new_word = True
@@ -169,6 +199,7 @@ class BasicTokenizer(object):
 
     def _clean_text(self, text):
         """Performs invalid character removal and whitespace cleanup on text."""
+        return text.encode('ascii', 'ignore').decode('ascii')
         output = []
         for char in text:
             cp = ord(char)
