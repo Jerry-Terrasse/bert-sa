@@ -4,8 +4,8 @@
 
 import os
 import json
-from typing import NamedTuple
 from tqdm import tqdm
+from functools import reduce
 
 import torch
 import torch.nn as nn
@@ -13,6 +13,11 @@ import torch.nn as nn
 import checkpoint
 
 from loguru import logger
+
+from utils import plot_loss, Curve
+from evaluate import Result
+
+from typing import NamedTuple, Callable
 
 class Config(NamedTuple):
     """ Hyperparameters for training """
@@ -41,7 +46,7 @@ class Trainer(object):
         self.save_dir = save_dir
         self.device = device # device name
 
-    def train(self, get_loss, model_file=None, pretrain_file=None, data_parallel=True):
+    def train(self, get_loss, model_file=None, pretrain_file=None, data_parallel=True, fig_path: str = None):
         """ Train Loop """
         self.model.train() # train mode
         self.load(model_file, pretrain_file)
@@ -49,6 +54,10 @@ class Trainer(object):
         if data_parallel: # use Data Parallelism with Multi-GPU
             model = nn.DataParallel(model)
 
+        loss_curve = Curve("loss", [])
+        epoch_loss_curve = Curve("epoch_loss", [], []) # average loss in each epoch
+        
+        logger.info('Start training!')
         global_step = 0 # global iteration steps regardless of epochs
         for e in range(self.cfg.n_epochs):
             loss_sum = 0. # the sum of iteration losses to get average loss in every epoch
@@ -64,6 +73,9 @@ class Trainer(object):
                 global_step += 1
                 loss_sum += loss.item()
                 iter_bar.set_description('Iter (loss=%5.3f)'%loss.item())
+                
+                loss_curve.y.append(loss.item())
+                plot_loss([loss_curve, epoch_loss_curve], fig_path)
 
                 if global_step % self.cfg.save_steps == 0: # save
                     self.save(global_step)
@@ -74,10 +86,13 @@ class Trainer(object):
                     self.save(global_step) # save and finish when global_steps reach total_steps
                     return
 
+            epoch_loss_curve.x.append(global_step)
+            epoch_loss_curve.y.append(loss_sum/(i+1))
+            plot_loss([loss_curve, epoch_loss_curve], fig_path)
             logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum/(i+1)))
         self.save(global_step)
 
-    def eval(self, evaluate, model_file, data_parallel=True):
+    def eval(self, evaluate: Callable[[nn.Module, list], Result], model_file, data_parallel=True):
         """ Evaluation Loop """
         self.model.eval() # evaluation mode
         self.load(model_file, None)
@@ -85,16 +100,17 @@ class Trainer(object):
         if data_parallel: # use Data Parallelism with Multi-GPU
             model = nn.DataParallel(model)
 
+        logger.info('Start evaluation!')
         results = [] # prediction results
         iter_bar = tqdm(self.data_iter, desc='Iter (loss=X.XXX)')
         for batch in iter_bar:
             batch = [t.to(self.device) for t in batch]
             with torch.no_grad(): # evaluation without gradient calculation
-                accuracy, result = evaluate(model, batch) # accuracy to print
+                result = evaluate(model, batch) # accuracy to print
             results.append(result)
-
+            accuracy, _ = result.summary(1)
             iter_bar.set_description('Iter(acc=%5.3f)'%accuracy)
-        return results
+        return Result.reduce(results)
 
     def load(self, model_file, pretrain_file):
         """ load saved model or pretrained transformer (a part of model) """

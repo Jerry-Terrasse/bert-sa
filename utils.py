@@ -11,6 +11,8 @@ import torch
 
 from loguru import logger
 
+from matplotlib import pyplot as plt
+
 def set_seeds(seed):
     "set random seeds"
     random.seed(seed)
@@ -92,3 +94,20 @@ def get_logger(name, log_path):
     logger.setLevel(logging.DEBUG)
     return logger
 
+class Curve:
+    def __init__(self, label: str, y: list[float], x: list[int] = None, **kwargs):
+        self.y = y
+        self.x = x
+        self.label = label
+        self.kwargs = kwargs
+
+def plot_loss(curves: Curve|list[Curve], save: str):
+    if not isinstance(curves, list):
+        curves = [curves]
+    for curve in curves:
+        if curve.y == []:
+            continue
+        plt.plot(curve.x or range(len(curve.y)), curve.y, label=curve.label, **curve.kwargs)
+    plt.legend()
+    plt.savefig(save)
+    plt.close()

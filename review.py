@@ -19,13 +19,15 @@ import optim
 import train
 
 from utils import set_seeds, get_device, truncate_tokens_pair
+from evaluate import Result
 
 from tqdm import tqdm
 from loguru import logger
 logger.remove()
 logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
 title = sys.argv[0].split("/")[-1].split(".")[0]
-log_file = f"logs/{title}-{datetime.now():%Y-%m-%d-%H-%M-%S}.log"
+prefix = f"logs/{title}-{datetime.now():%Y-%m-%d-%H-%M-%S}"
+log_file = f"{prefix}.log"
 logger.add(log_file, colorize=False)
 
 from dataset import TomatoDataset
@@ -52,6 +54,7 @@ class TomatoConfig(NamedTuple):
     """ Hyperparameters for training """
     seed: int = 3431 # random seed
     batch_size: int = 32
+    eval_batch_size: int = 32
     lr: int = 5e-5 # learning rate
     n_epochs: int = 10 # the number of epoch
     # `warm up` period = warmup(0.1)*total_steps
@@ -62,14 +65,11 @@ class TomatoConfig(NamedTuple):
     train_data: str = 'home_train.json'
     eval_data: str = 'home_eval.json'
 
-def discriminate(X: torch.Tensor):
-    return torch.round(X * 10).long()
-
 def main(
          train_cfg='config/train_tomato.json',
          model_cfg='config/bert_base.json',
          model_file=None,
-         eval_model='save/exp1.0/model_steps_85870.pt',
+         eval_model='save/model_steps_18000.pt',
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
@@ -104,7 +104,7 @@ def main(
     weights = torch.DoubleTensor(weights)
     sampler = WeightedRandomSampler(weights, len(weights))
     
-    train_iter, eval_iter = DataLoader(train_data, batch_size=cfg.batch_size, sampler=sampler), DataLoader(eval_data, batch_size=cfg.batch_size, shuffle=False)
+    train_iter, eval_iter = DataLoader(train_data, batch_size=cfg.batch_size, sampler=sampler), DataLoader(eval_data, batch_size=cfg.eval_batch_size, shuffle=False)
     
     # test balance
     # tot = []
@@ -133,23 +133,26 @@ def main(
             loss = criterion(prediction, rating)
             return loss
 
-        trainer.train(get_loss, model_file, pretrain_file, data_parallel)
+        trainer.train(get_loss, model_file, pretrain_file, data_parallel, f'{prefix}.jpg')
 
     elif mode == 'eval':
         def evaluate(model, batch):
             rating, quote, mask = batch
             prediction = model(quote, mask).reshape(-1)
             
-            pred_level = discriminate(prediction)
-            label_level = discriminate(rating)
+            result = Result(rating, prediction)
             
-            result = (pred_level == label_level).float() #.cpu().numpy()
-            accuracy = result.mean()
-            return accuracy, result
+            return result
 
-        results = trainer.eval(evaluate, eval_model, data_parallel)
-        total_accuracy = torch.cat(results).mean().item()
-        logger.success(f'Accuracy: {total_accuracy:.4%}')
+        result = trainer.eval(evaluate, eval_model, data_parallel)
+        total_acc, _ = result.summary()
+        total_acc2, _ = result.summary(1)
+        logger.success(f'Accuracy: {total_acc:.4%} {total_acc2:.4%}')
+        table = result.table()
+        Result.heatmap(table, f'{prefix}_heatmap.jpg')
+    
+    else:
+        logger.error(f'invalid mode: {mode}')
 
 
 if __name__ == '__main__':

@@ -38,6 +38,7 @@ class TomatoDataset(Dataset):
         max_len -= 1 # for [CLS]
         
         self.data = json.load(open(path, 'r'))
+        # self.data = json.load(open(path, 'r'))[:100] # for test
         self.ratings: list[float] = [r for r, q in self.data]
         self.quotes: list[str] = [q for r, q in self.data]
         self.counter = Counter(self.ratings)
