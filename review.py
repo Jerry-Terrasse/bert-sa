@@ -73,9 +73,10 @@ def main(
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-         save_dir='save/exp1.1',
+         save_dir='save/exp1.2',
          max_len=100,
          mode='train',
+         eval_in_train=True,
          total_steps=-1):
     logger.info(f"{mode} Mode")
 
@@ -120,30 +121,28 @@ def main(
     logger.info(f"Criterion: {criterion}")
     logger.info(f"Number of parameters = {sum(p.numel() for p in model.parameters())}, size = {sum(p.numel() * p.element_size() for p in model.parameters()) / 1024 / 1024} MB")
 
+    device = get_device()
     trainer = train.Trainer(cfg,
                             model,
                             train_iter if mode == 'train' else eval_iter,
                             optim.optim4GPU(cfg, model),
-                            save_dir, get_device())
+                            save_dir, device)
 
+    def get_loss(model, batch, global_step): # make sure loss is a scalar tensor
+        rating, quote, mask = [x.to(device) for x in batch]
+        prediction = model(quote, mask).reshape(-1)
+        loss = criterion(prediction, rating)
+        return loss
+    def evaluate(model, batch):
+        rating, quote, mask = [x.to(device) for x in batch]
+        prediction = model(quote, mask).reshape(-1)
+        result = Result(rating, prediction)
+        return result
+    
     if mode == 'train':
-        def get_loss(model, batch, global_step): # make sure loss is a scalar tensor
-            rating, quote, mask = batch
-            prediction = model(quote, mask).reshape(-1)
-            loss = criterion(prediction, rating)
-            return loss
-
-        trainer.train(get_loss, model_file, pretrain_file, data_parallel, f'{prefix}.jpg')
+        trainer.train(get_loss, model_file, pretrain_file, data_parallel, f'{prefix}.jpg', evaluate if eval_in_train else None)
 
     elif mode == 'eval':
-        def evaluate(model, batch):
-            rating, quote, mask = batch
-            prediction = model(quote, mask).reshape(-1)
-            
-            result = Result(rating, prediction)
-            
-            return result
-
         result = trainer.eval(evaluate, eval_model, data_parallel)
         total_acc, _ = result.summary()
         total_acc2, _ = result.summary(1)

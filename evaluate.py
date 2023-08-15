@@ -44,9 +44,10 @@ class Result:
         plt.imshow(table_.cpu())
         plt.colorbar()
         plt.savefig(save_path)
+        plt.close()
     @staticmethod
     def reduce(results: list['Result']):
-        res = Result.empty(results[0].label.device)
+        res = Result.empty(next(iter(results)).label.device)
         for result in results:
             res += result
         return res

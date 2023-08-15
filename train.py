@@ -5,7 +5,7 @@
 import os
 import json
 from tqdm import tqdm
-from functools import reduce
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -46,7 +46,7 @@ class Trainer(object):
         self.save_dir = save_dir
         self.device = device # device name
 
-    def train(self, get_loss, model_file=None, pretrain_file=None, data_parallel=True, fig_path: str = None):
+    def train(self, get_loss, model_file=None, pretrain_file=None, data_parallel=True, fig_path: str = None, evaluate: Callable[[nn.Module, list], Result] = None):
         """ Train Loop """
         self.model.train() # train mode
         self.load(model_file, pretrain_file)
@@ -56,10 +56,12 @@ class Trainer(object):
 
         loss_curve = Curve("loss", [])
         epoch_loss_curve = Curve("epoch_loss", [], []) # average loss in each epoch
+        acc_curve = Curve("acc", [], [])
         
         logger.info('Start training!')
         global_step = 0 # global iteration steps regardless of epochs
         for e in range(self.cfg.n_epochs):
+            model.train()
             loss_sum = 0. # the sum of iteration losses to get average loss in every epoch
             iter_bar = tqdm(self.data_iter, desc='Iter (loss=X.XXX)')
             for i, batch in enumerate(iter_bar):
@@ -75,6 +77,9 @@ class Trainer(object):
                 iter_bar.set_description('Iter (loss=%5.3f)'%loss.item())
                 
                 loss_curve.y.append(loss.item())
+                if epoch_loss_curve.x == []:
+                    epoch_loss_curve.x.append(0)
+                    epoch_loss_curve.y.append(loss.item())
                 plot_loss([loss_curve, epoch_loss_curve], fig_path)
 
                 if global_step % self.cfg.save_steps == 0: # save
@@ -86,6 +91,22 @@ class Trainer(object):
                     self.save(global_step) # save and finish when global_steps reach total_steps
                     return
 
+            if evaluate is not None:
+                model.eval()
+                logger.info('Start evaluation!')
+                with torch.no_grad():
+                    result = Result.reduce(map(lambda batch: evaluate(model, batch), tqdm(self.data_iter)))
+                    
+                total_acc, _ = result.summary()
+                total_acc2, _ = result.summary(1)
+                
+                acc_curve.x.append(global_step)
+                acc_curve.y.append(total_acc)
+                logger.success(f'Accuracy: {total_acc:.4%} {total_acc2:.4%}')
+                
+                table = result.table()
+                Result.heatmap(table, f'logs/heatmap/{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
+            
             epoch_loss_curve.x.append(global_step)
             epoch_loss_curve.y.append(loss_sum/(i+1))
             plot_loss([loss_curve, epoch_loss_curve], fig_path)
