@@ -12,6 +12,7 @@ import torch.nn as nn
 
 import checkpoint
 
+from loguru import logger
 
 class Config(NamedTuple):
     """ Hyperparameters for training """
@@ -68,12 +69,12 @@ class Trainer(object):
                     self.save(global_step)
 
                 if self.cfg.total_steps and self.cfg.total_steps < global_step:
-                    print('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum/(i+1)))
-                    print('The Total Steps have been reached.')
+                    logger.success('Epoch %d/%d : Average Loss %5.3f' % (e+1, self.cfg.n_epochs, loss_sum/(i+1)))
+                    logger.success('The Total Steps have been reached.')
                     self.save(global_step) # save and finish when global_steps reach total_steps
                     return
 
-            print('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum/(i+1)))
+            logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum/(i+1)))
         self.save(global_step)
 
     def eval(self, evaluate, model_file, data_parallel=True):
@@ -98,11 +99,11 @@ class Trainer(object):
     def load(self, model_file, pretrain_file):
         """ load saved model or pretrained transformer (a part of model) """
         if model_file:
-            print('Loading the model from', model_file)
+            logger.info('Loading the model from', model_file)
             self.model.load_state_dict(torch.load(model_file))
 
         elif pretrain_file: # use pretrained transformer
-            print('Loading the pretrained model from', pretrain_file)
+            logger.info('Loading the pretrained model from', pretrain_file)
             if pretrain_file.endswith('.ckpt'): # checkpoint file in tensorflow
                 checkpoint.load_model(self.model.transformer, pretrain_file)
             elif pretrain_file.endswith('.pt'): # pretrain model file in pytorch

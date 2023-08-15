@@ -15,3 +15,6 @@ dstc7.egg-info/*
 
 # model
 *.pt
+
+# Logs
+logs/

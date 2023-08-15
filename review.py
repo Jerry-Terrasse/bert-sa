@@ -3,12 +3,12 @@
 
 """ Fine-tuning on A Classification Task with pretrained Transformer """
 
-import itertools
-import csv
+import sys
 import fire
 import json
 from collections import Counter
 from typing import NamedTuple
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -22,7 +22,12 @@ import train
 from utils import set_seeds, get_device, truncate_tokens_pair
 
 from tqdm import tqdm
-# from loguru import logger
+from loguru import logger
+logger.remove()
+logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
+title = sys.argv[0].split("/")[-1].split(".")[0]
+log_file = f"logs/{title}-{datetime.now():%Y-%m-%d-%H-%M-%S}.log"
+logger.add(log_file, colorize=False)
 
 from dataset import TomatoDataset
 
@@ -65,7 +70,7 @@ def main(
          train_cfg='config/train_tomato.json',
          model_cfg='config/bert_base.json',
          model_file=None,
-         eval_file='save/model_steps_8000.pt',
+         eval_model='save/exp1.1/model_steps_1000.pt',
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
@@ -73,6 +78,7 @@ def main(
          max_len=100,
          mode='train',
          total_steps=-1):
+    logger.info(f"{mode} Mode")
 
     train_cfg_dict = json.load(open(train_cfg))
     if total_steps > 0:
@@ -81,6 +87,10 @@ def main(
     
     model_cfg_dict = json.load(open(model_cfg))
     model_cfg = models.Config(**model_cfg_dict)
+    
+    logger.info(f"Train Config: {cfg}")
+    logger.info(f"Model Config: {model_cfg}")
+    logger.info(f"argv: {sys.argv}")
     
     set_seeds(cfg.seed)
     
@@ -106,6 +116,9 @@ def main(
     
     model = Predictor(model_cfg)
     criterion = nn.MSELoss()
+    logger.info(f"Model: \n{model}")
+    logger.info(f"Criterion: {criterion}")
+    logger.info(f"Number of parameters = {sum(p.numel() for p in model.parameters())}, size = {sum(p.numel() * p.element_size() for p in model.parameters()) / 1024 / 1024} MB")
 
     trainer = train.Trainer(cfg,
                             model,
@@ -134,9 +147,9 @@ def main(
             accuracy = result.mean()
             return accuracy, result
 
-        results = trainer.eval(evaluate, eval_file, data_parallel)
+        results = trainer.eval(evaluate, eval_model, data_parallel)
         total_accuracy = torch.cat(results).mean().item()
-        print('Accuracy: ', total_accuracy)
+        logger.success(f'Accuracy: {total_accuracy:.4%}')
 
 
 if __name__ == '__main__':
