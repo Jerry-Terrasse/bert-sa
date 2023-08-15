@@ -44,7 +44,7 @@ class TomatoDataset(Dataset):
         tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
         self.tokenizer = tokenizer
 
-        chunksize = len(self.quotes) // 10 // 4
+        chunksize = len(self.quotes) // 10 // 8
         with Pool(10, initializer=init, initargs=(vocab_file, do_lower_case, max_len)) as p:
             token_list = list(tqdm(p.imap(quote2tokens, self.quotes, chunksize=chunksize), total=len(self.quotes)))
         

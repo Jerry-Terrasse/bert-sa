@@ -12,7 +12,7 @@ from typing import NamedTuple
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 import tokenization
 import models
@@ -64,11 +64,12 @@ def discriminate(X: torch.Tensor):
 def main(
          train_cfg='config/train_tomato.json',
          model_cfg='config/bert_base.json',
-         model_file='save/model_steps_85870.pt',
+         model_file=None,
+         eval_file='save/model_steps_8000.pt',
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-         save_dir='save/',
+         save_dir='save/exp1.1',
          max_len=100,
          mode='train',
          total_steps=-1):
@@ -86,7 +87,22 @@ def main(
     train_file = cfg.train_data
     eval_file = cfg.eval_data
     train_data, eval_data = TomatoDataset(train_file, vocab, max_len=max_len), TomatoDataset(eval_file, vocab, max_len=max_len)
-    train_iter, eval_iter = DataLoader(train_data, batch_size=cfg.batch_size, shuffle=True), DataLoader(eval_data, batch_size=cfg.batch_size, shuffle=False)
+    
+    # Class Balance
+    weights = {rating: len(train_data)/cnt for rating, cnt in train_data.counter.items()}
+    weights = [weights[rating] for rating in train_data.ratings]
+    weights = torch.DoubleTensor(weights)
+    sampler = WeightedRandomSampler(weights, len(weights))
+    
+    train_iter, eval_iter = DataLoader(train_data, batch_size=cfg.batch_size, sampler=sampler), DataLoader(eval_data, batch_size=cfg.batch_size, shuffle=False)
+    
+    # test balance
+    # tot = []
+    # for batch in train_iter:
+    #     rating, quote, mask = batch
+    #     tot.extend(rating.tolist())
+    # print(f"Sample: {Counter(tot)}")    
+    # exit(0)
     
     model = Predictor(model_cfg)
     criterion = nn.MSELoss()
@@ -118,7 +134,7 @@ def main(
             accuracy = result.mean()
             return accuracy, result
 
-        results = trainer.eval(evaluate, model_file, data_parallel)
+        results = trainer.eval(evaluate, eval_file, data_parallel)
         total_accuracy = torch.cat(results).mean().item()
         print('Accuracy: ', total_accuracy)
 
