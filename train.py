@@ -99,11 +99,11 @@ class Trainer(object):
     def load(self, model_file, pretrain_file):
         """ load saved model or pretrained transformer (a part of model) """
         if model_file:
-            logger.info('Loading the model from', model_file)
+            logger.info(f'Loading the model from {model_file}')
             self.model.load_state_dict(torch.load(model_file))
 
         elif pretrain_file: # use pretrained transformer
-            logger.info('Loading the pretrained model from', pretrain_file)
+            logger.info(f'Loading the pretrained model from {pretrain_file}')
             if pretrain_file.endswith('.ckpt'): # checkpoint file in tensorflow
                 checkpoint.load_model(self.model.transformer, pretrain_file)
             elif pretrain_file.endswith('.pt'): # pretrain model file in pytorch
