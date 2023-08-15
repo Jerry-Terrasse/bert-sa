@@ -1,8 +1,10 @@
 import torch
 from matplotlib import pyplot as plt
 
+N = 11
+
 def discriminate(X: torch.Tensor):
-    return torch.round(X * 10).long()
+    return torch.round(X * N).long()
 
 class Result:
     def __init__(self, label: torch.Tensor, pred: torch.Tensor):
@@ -17,9 +19,8 @@ class Result:
     def table(self):
         # result = torch.zeros(11, 11, dtype=torch.long).to(self.label.device)
         # result[self.label_level, self.pred_level] += 1
-        n = 11
-        result = torch.zeros(n, n, dtype=torch.long).to(self.label.device)
-        indices = self.label_level * n + self.pred_level
+        result = torch.zeros(N+1, N+1, dtype=torch.long).to(self.label.device)
+        indices = self.label_level * (N+1) + self.pred_level
         counts = torch.bincount(indices)
         result.view(-1)[: counts.numel()] = counts
         return result
@@ -36,8 +37,8 @@ class Result:
         return self
     @staticmethod
     def heatmap(table_: torch.Tensor, save_path: str):
-        assert table_.shape == (11, 11)
-        plt.figure(figsize=(10, 10))
+        assert table_.shape == (N+1, N+1)
+        plt.figure(figsize=(N, N))
         plt.xlabel('Predicted Level')
         plt.ylabel('Label Level')
         plt.title('Confusion Matrix')

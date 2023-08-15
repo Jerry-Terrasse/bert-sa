@@ -45,7 +45,7 @@ class TomatoDataset(Dataset):
         logger.info(self.counter)
         
         logger.info('Loading dataset...')
-        self.rating_tensors = [torch.tensor(r / 5.) for r in self.ratings]
+        self.rating_tensors = [torch.tensor(r / 5.5) for r in self.ratings]
         tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
         self.tokenizer = tokenizer
 
