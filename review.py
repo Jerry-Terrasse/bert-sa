@@ -104,7 +104,7 @@ def discriminate(X: torch.Tensor):
 def main(
          train_cfg='config/train_tomato.json',
          model_cfg='config/bert_base.json',
-         model_file=None,
+         model_file='save/model_steps_85870.pt',
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
@@ -149,7 +149,7 @@ def main(
     elif mode == 'eval':
         def evaluate(model, batch):
             rating, quote, mask = batch
-            prediction = model(quote, mask)
+            prediction = model(quote, mask).reshape(-1)
             
             pred_level = discriminate(prediction)
             label_level = discriminate(rating)
