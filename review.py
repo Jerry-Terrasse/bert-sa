@@ -24,47 +24,7 @@ from utils import set_seeds, get_device, truncate_tokens_pair
 from tqdm import tqdm
 # from loguru import logger
 
-class TomatoDataset(Dataset):
-    """
-    Review Dataset of RottenTomatoes
-    
-    Tuple[float, str]
-    """
-    def __init__(self, path: str, vocab_file: str, do_lower_case: bool = True, max_len: int = 100):
-        super().__init__()
-        max_len -= 1 # for [CLS]
-        
-        self.data = json.load(open(path, 'r'))
-        self.ratings: list[float] = [r for r, q in self.data]
-        self.quotes: list[str] = [q for r, q in self.data]
-        self.counter = Counter(self.ratings)
-        print(self.counter)
-        
-        print('Loading dataset...')
-        self.rating_tensors = [torch.tensor(r / 5.) for r in self.ratings]
-        self.quote_tensors = []
-        self.mask_tensors = []
-        tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
-        self.tokenizer = tokenizer
-        for quote in tqdm(self.quotes):
-            tokens = ['[CLS]'] + tokenizer.tokenize(quote, max_len)
-            if len(tokens) >= max_len:
-                tokens = tokens[:max_len]
-            else:
-                tokens += ['[PAD]'] * (max_len - len(tokens))
-            tokens = tokenizer.convert_tokens_to_ids(tokens)
-            tokens = torch.tensor(tokens)
-            self.quote_tensors.append(tokens)
-            
-            mask = (tokens != self.tokenizer.vocab['[PAD]']).long()
-            self.mask_tensors.append(mask)
-        print('Done')
-    
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self, index):
-        return self.rating_tensors[index], self.quote_tensors[index], self.mask_tensors[index]
+from dataset import TomatoDataset
 
 class Predictor(nn.Module):
     """ Predict rating from quote """
