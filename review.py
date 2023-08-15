@@ -14,7 +14,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-import tokenization
 import models
 import optim
 import train
@@ -70,7 +69,7 @@ def main(
          train_cfg='config/train_tomato.json',
          model_cfg='config/bert_base.json',
          model_file=None,
-         eval_model='save/exp1.1/model_steps_1000.pt',
+         eval_model='save/exp1.0/model_steps_85870.pt',
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
@@ -91,6 +90,7 @@ def main(
     logger.info(f"Train Config: {cfg}")
     logger.info(f"Model Config: {model_cfg}")
     logger.info(f"argv: {sys.argv}")
+    logger.debug(f"main args: {train_cfg=} {model_cfg=} {model_file=} {eval_model=} {pretrain_file=} {data_parallel=} {vocab=} {save_dir=} {max_len=} {mode=} {total_steps=}")
     
     set_seeds(cfg.seed)
     
