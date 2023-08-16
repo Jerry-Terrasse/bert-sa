@@ -149,6 +149,9 @@ def main(
         logger.success(f'Accuracy: {total_acc:.4%} {total_acc2:.4%}')
         table = result.table()
         Result.heatmap(table, f'{prefix}_heatmap.jpg')
+        
+        table_ratio = table / table.sum(axis=1, keepdims=True)
+        Result.heatmap(table_ratio, f'{prefix}_heatmap_ratio.jpg')
     
     else:
         logger.error(f'invalid mode: {mode}')

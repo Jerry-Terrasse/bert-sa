@@ -107,6 +107,8 @@ class Trainer(object):
                 
                 table = result.table()
                 Result.heatmap(table, f'logs/heatmap/{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
+                table_ratio = table / table.sum(axis=1, keepdims=True)
+                Result.heatmap(table_ratio, f'logs/heatmap/ratio-{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
             
             epoch_loss_curve.x.append(global_step)
             epoch_loss_curve.y.append(loss_sum/(i+1))
@@ -154,6 +156,10 @@ class Trainer(object):
 
     def save(self, i):
         """ save current model """
-        torch.save(self.model.state_dict(), # save model object before nn.DataParallel
-            os.path.join(self.save_dir, 'model_steps_'+str(i)+'.pt'))
+        save_path = os.path.join(self.save_dir, 'model_steps_'+str(i)+'.pt')
+        logger.info(f'Saving the model to {save_path}')
+        torch.save(
+            self.model.state_dict(), # save model object before nn.DataParallel
+            save_path
+        )
 
