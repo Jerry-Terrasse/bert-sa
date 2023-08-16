@@ -41,7 +41,7 @@ class Predictor(nn.Module):
         self.activ = nn.Tanh()
         self.drop = nn.Dropout(cfg.p_drop_hidden)
         self.predictor = nn.Linear(cfg.dim, 1)
-        self.output = nn.Sigmoid()
+        self.output = nn.ReLU()
     
     def forward(self, input_ids, input_mask):
         segment_ids = torch.zeros_like(input_ids, dtype=torch.long)
@@ -73,7 +73,7 @@ def main(
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-         save_dir='save/exp1.2',
+         save_dir='save/exp1.3',
          max_len=100,
          mode='train',
          eval_in_train=True,
