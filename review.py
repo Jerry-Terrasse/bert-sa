@@ -140,7 +140,7 @@ def main(
         return result
     
     if mode == 'train':
-        trainer.train(get_loss, model_file, pretrain_file, data_parallel, f'{prefix}.jpg', evaluate if eval_in_train else None)
+        trainer.train(get_loss, model_file, pretrain_file, data_parallel, f'{prefix}.jpg', evaluate if eval_in_train else None, eval_iter)
 
     elif mode == 'eval':
         result = trainer.eval(evaluate, eval_model, data_parallel)

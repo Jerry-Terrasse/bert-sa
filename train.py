@@ -9,6 +9,7 @@ from datetime import datetime
 
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 
 import checkpoint
 
@@ -46,7 +47,7 @@ class Trainer(object):
         self.save_dir = save_dir
         self.device = device # device name
 
-    def train(self, get_loss, model_file=None, pretrain_file=None, data_parallel=True, fig_path: str = None, evaluate: Callable[[nn.Module, list], Result] = None):
+    def train(self, get_loss, model_file=None, pretrain_file=None, data_parallel=True, fig_path: str = None, evaluate: Callable[[nn.Module, list], Result] = None, eval_iter: DataLoader = None):
         """ Train Loop """
         self.model.train() # train mode
         self.load(model_file, pretrain_file)
@@ -95,7 +96,7 @@ class Trainer(object):
                 model.eval()
                 logger.info('Start evaluation!')
                 with torch.no_grad():
-                    result = Result.reduce(map(lambda batch: evaluate(model, batch), tqdm(self.data_iter)))
+                    result = Result.reduce(map(lambda batch: evaluate(model, batch), tqdm(eval_iter)))
                     
                 total_acc, _ = result.summary()
                 total_acc2, _ = result.summary(1)
