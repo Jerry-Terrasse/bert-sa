@@ -10,6 +10,7 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard.writer import SummaryWriter
 
 import checkpoint
 
@@ -62,8 +63,19 @@ class Trainer(object):
         self.save_dir = save_dir
         self.device = device # device name
 
-    def train(self, get_loss, model_file=None, pretrain_file=None, data_parallel=True, fig_path: str = None, evaluate: Callable[[nn.Module, list], Result] = None, eval_iter: DataLoader = None):
+    def train(
+        self,
+        get_loss: Callable[[nn.Module, list, int], torch.Tensor],
+        log_dir: str,
+        model_file: str = None,
+        pretrain_file: str = None,
+        data_parallel: bool = True,
+        fig_path: str = None,
+        evaluate: Callable[[nn.Module, list], Result] = None,
+        eval_iter: DataLoader = None
+    ):
         """ Train Loop """
+        writer = SummaryWriter(log_dir=log_dir) # writer for tensorboard
         self.model.train() # train mode
         self.load(model_file, pretrain_file)
         model = self.model.to(self.device)
@@ -98,6 +110,7 @@ class Trainer(object):
                     epoch_loss_curve.y.append(loss.item())
                 if fig_path:
                     plot_loss([loss_curve, epoch_loss_curve], fig_path)
+                writer.add_scalar('loss', loss.item(), global_step)
 
                 if global_step % self.cfg.save_steps == 0: # save
                     self.save(f"model_step_{global_step}.pt")
@@ -116,29 +129,38 @@ class Trainer(object):
                 logger.info('Start evaluation!')
                 with torch.no_grad():
                     result = Result.reduce(map(lambda batch: evaluate(model, batch), tqdm(eval_iter)))
-                    
+                
+                eval_loss = result.loss.mean() if result.loss else None
+                if eval_loss:
+                    writer.add_scalar('eval_loss', eval_loss.item(), global_step)
+                    logger.info(f'Evaluation Loss: {eval_loss:.4f}')
+                
                 total_acc, _ = result.summary()
                 total_acc2, _ = result.summary(1)
                 
                 acc_curve.x.append(global_step)
                 acc_curve.y.append(total_acc.item())
+                writer.add_scalar('acc', total_acc.item(), global_step)
+                writer.add_scalar('acc2', total_acc2.item(), global_step)
                 logger.success(f'Accuracy: {total_acc:.4%} {total_acc2:.4%}')
                 
                 table = result.table()
-                Result.heatmap(table, f'logs/heatmap/{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
-                d: int = 1
+                img = Result.heatmap(table, f'logs/heatmap/{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
+                writer.add_image('heatmap', img, global_step, dataformats='HWC')
                 table_ratio = table / table.sum(dim=1, keepdim=True)
-                Result.heatmap(table_ratio, f'logs/heatmap/ratio-{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
+                img = Result.heatmap(table_ratio, f'logs/heatmap/ratio-{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
+                writer.add_image('heatmap_ratio', img, global_step, dataformats='HWC')
             
             epoch_loss_curve.x.append(global_step)
             epoch_loss_curve.y.append(loss_sum / self.cfg.n_epochs)
+            writer.add_scalar('epoch_loss', loss_sum / self.cfg.n_epochs, global_step)
             if fig_path:
                 plot_loss([loss_curve, epoch_loss_curve], fig_path)
             logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum / self.cfg.n_epochs))
         if not self.cfg.save_per_epoch:
             self.save(f"model_step_{global_step}.pt")
 
-    def eval(self, evaluate: Callable[[nn.Module, list], Result], model_file, data_parallel=True):
+    def eval(self, evaluate: Callable[[nn.Module, list], Result], log_dir: str, model_file, data_parallel=True):
         """ Evaluation Loop """
         self.model.eval() # evaluation mode
         self.load(model_file, None)

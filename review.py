@@ -57,6 +57,7 @@ def main(
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
          save_dir='save/exp1.4',
+         log_dir='logs/tb',
          max_len=100,
          dataset_size=-1, # -1 for full dataset, otherwise for partial dataset for debugging
          mode='train',
@@ -119,14 +120,15 @@ def main(
     def evaluate(model, batch):
         rating, quote, mask = [x.to(device) for x in batch]
         prediction = model(quote, mask).reshape(-1)
-        result = Result(rating, prediction)
+        loss = criterion(prediction, rating)
+        result = Result(rating, prediction, loss)
         return result
     
     if mode == 'train':
-        trainer.train(get_loss, model_file, pretrain_file, data_parallel, f'{prefix}.jpg', evaluate if eval_in_train else None, eval_iter)
+        trainer.train(get_loss, log_dir, model_file, pretrain_file, data_parallel, f'{prefix}.jpg', evaluate if eval_in_train else None, eval_iter)
 
     elif mode == 'eval':
-        result = trainer.eval(evaluate, eval_model, data_parallel)
+        result = trainer.eval(evaluate, log_dir, eval_model, data_parallel)
         total_acc, _ = result.summary()
         total_acc2, _ = result.summary(1)
         logger.success(f'Accuracy: {total_acc:.4%} {total_acc2:.4%}')
