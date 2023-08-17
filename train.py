@@ -36,10 +36,25 @@ class Config(NamedTuple):
     def from_json(cls, file): # load config from json file
         return cls(**json.load(open(file, "r")))
 
+class TomatoConfig(NamedTuple):
+    """ Hyperparameters for training """
+    seed: int = 3431 # random seed
+    batch_size: int = 32
+    eval_batch_size: int = 32
+    lr: int = 5e-5 # learning rate
+    n_epochs: int = 10 # the number of epoch
+    # `warm up` period = warmup(0.1)*total_steps
+    # linearly increasing learning rate from zero to the specified value(5e-5)
+    warmup: float = 0.1
+    save_steps: int = 100 # interval for saving model
+    save_per_epoch: bool = True # save model per epoch
+    total_steps: int = 100000 # total number of steps to train
+    train_data: str = 'home_train.json'
+    eval_data: str = 'home_eval.json'
 
 class Trainer(object):
     """Training Helper Class"""
-    def __init__(self, cfg, model, data_iter, optimizer, save_dir, device):
+    def __init__(self, cfg: TomatoConfig, model, data_iter, optimizer, save_dir, device):
         self.cfg = cfg # config for training : see class Config
         self.model = model
         self.data_iter = data_iter # iterator to load data
@@ -84,14 +99,17 @@ class Trainer(object):
                 plot_loss([loss_curve, epoch_loss_curve], fig_path)
 
                 if global_step % self.cfg.save_steps == 0: # save
-                    self.save(global_step)
+                    self.save(f"model_step_{global_step}.pt")
 
                 if self.cfg.total_steps and self.cfg.total_steps < global_step:
                     logger.success('Epoch %d/%d : Average Loss %5.3f' % (e+1, self.cfg.n_epochs, loss_sum/(i+1)))
                     logger.success('The Total Steps have been reached.')
-                    self.save(global_step) # save and finish when global_steps reach total_steps
+                    self.save(f"model_step_{global_step}.pt") # save and finish when global_steps reach total_steps
                     return
 
+            if self.cfg.save_per_epoch:
+                self.save(f"model_epoch{e+1}.pt")
+            
             if evaluate is not None:
                 model.eval()
                 logger.info('Start evaluation!')
@@ -114,7 +132,8 @@ class Trainer(object):
             epoch_loss_curve.y.append(loss_sum/(i+1))
             plot_loss([loss_curve, epoch_loss_curve], fig_path)
             logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum/(i+1)))
-        self.save(global_step)
+        if not self.cfg.save_per_epoch:
+            self.save(f"model_step_{global_step}.pt")
 
     def eval(self, evaluate: Callable[[nn.Module, list], Result], model_file, data_parallel=True):
         """ Evaluation Loop """
@@ -154,9 +173,9 @@ class Trainer(object):
                 ) # load only transformer parts
 
 
-    def save(self, i):
+    def save(self, fname: str):
         """ save current model """
-        save_path = os.path.join(self.save_dir, 'model_steps_'+str(i)+'.pt')
+        save_path = os.path.join(self.save_dir, fname)
         logger.info(f'Saving the model to {save_path}')
         torch.save(
             self.model.state_dict(), # save model object before nn.DataParallel

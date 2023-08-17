@@ -6,8 +6,6 @@
 import sys
 import fire
 import json
-from collections import Counter
-from typing import NamedTuple
 from datetime import datetime
 
 import torch
@@ -50,21 +48,6 @@ class Predictor(nn.Module):
         output = self.output(self.predictor(self.drop(pooled_h)))
         return output
 
-class TomatoConfig(NamedTuple):
-    """ Hyperparameters for training """
-    seed: int = 3431 # random seed
-    batch_size: int = 32
-    eval_batch_size: int = 32
-    lr: int = 5e-5 # learning rate
-    n_epochs: int = 10 # the number of epoch
-    # `warm up` period = warmup(0.1)*total_steps
-    # linearly increasing learning rate from zero to the specified value(5e-5)
-    warmup: float = 0.1
-    save_steps: int = 100 # interval for saving model
-    total_steps: int = 100000 # total number of steps to train
-    train_data: str = 'home_train.json'
-    eval_data: str = 'home_eval.json'
-
 def main(
          train_cfg='config/train_tomato.json',
          model_cfg='config/bert_base.json',
@@ -73,8 +56,9 @@ def main(
          pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
          data_parallel=True,
          vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-         save_dir='save/exp1.3',
+         save_dir='save/exp1.4',
          max_len=100,
+         dataset_size=-1, # -1 for full dataset, otherwise for partial dataset for debugging
          mode='train',
          eval_in_train=True,
          total_steps=-1):
@@ -83,7 +67,7 @@ def main(
     train_cfg_dict = json.load(open(train_cfg))
     if total_steps > 0:
         train_cfg_dict['total_steps'] = total_steps
-    cfg = TomatoConfig(**train_cfg_dict)
+    cfg = train.TomatoConfig(**train_cfg_dict)
     
     model_cfg_dict = json.load(open(model_cfg))
     model_cfg = models.Config(**model_cfg_dict)
@@ -97,7 +81,7 @@ def main(
     
     train_file = cfg.train_data
     eval_file = cfg.eval_data
-    train_data, eval_data = TomatoDataset(train_file, vocab, max_len=max_len), TomatoDataset(eval_file, vocab, max_len=max_len)
+    train_data, eval_data = TomatoDataset(train_file, vocab, max_len=max_len, size=dataset_size), TomatoDataset(eval_file, vocab, max_len=max_len, size=dataset_size)
     
     # Class Balance
     weights = {rating: len(train_data)/cnt for rating, cnt in train_data.counter.items()}

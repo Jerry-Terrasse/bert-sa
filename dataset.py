@@ -33,11 +33,13 @@ class TomatoDataset(Dataset):
     
     Tuple[float, str]
     """
-    def __init__(self, path: str, vocab_file: str, do_lower_case: bool = True, max_len: int = 100):
+    def __init__(self, path: str, vocab_file: str, do_lower_case: bool = True, max_len: int = 100, size: int = -1):
         super().__init__()
         max_len -= 1 # for [CLS]
         
         self.data = json.load(open(path, 'r'))
+        if size > 0:
+            self.data = self.data[:size]
         # self.data = json.load(open(path, 'r'))[:1000] # for test
         self.ratings: list[float] = [r for r, q in self.data]
         self.quotes: list[str] = [q for r, q in self.data]
