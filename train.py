@@ -130,7 +130,7 @@ class Trainer(object):
                 with torch.no_grad():
                     result = Result.reduce(map(lambda batch: evaluate(model, batch), tqdm(eval_iter)))
                 
-                eval_loss = result.loss.mean() if result.loss else None
+                eval_loss = result.loss.mean() if result.loss is not None else None
                 if eval_loss:
                     writer.add_scalar('eval_loss', eval_loss.item(), global_step)
                     logger.info(f'Evaluation Loss: {eval_loss:.4f}')
