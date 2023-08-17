@@ -24,7 +24,7 @@ class Config(NamedTuple):
     """ Hyperparameters for training """
     seed: int = 3431 # random seed
     batch_size: int = 32
-    lr: int = 5e-5 # learning rate
+    lr: float = 5e-5 # learning rate
     n_epochs: int = 10 # the number of epoch
     # `warm up` period = warmup(0.1)*total_steps
     # linearly increasing learning rate from zero to the specified value(5e-5)
@@ -41,7 +41,7 @@ class TomatoConfig(NamedTuple):
     seed: int = 3431 # random seed
     batch_size: int = 32
     eval_batch_size: int = 32
-    lr: int = 5e-5 # learning rate
+    lr: float = 5e-5 # learning rate
     n_epochs: int = 10 # the number of epoch
     # `warm up` period = warmup(0.1)*total_steps
     # linearly increasing learning rate from zero to the specified value(5e-5)
@@ -96,7 +96,8 @@ class Trainer(object):
                 if epoch_loss_curve.x == []:
                     epoch_loss_curve.x.append(0)
                     epoch_loss_curve.y.append(loss.item())
-                plot_loss([loss_curve, epoch_loss_curve], fig_path)
+                if fig_path:
+                    plot_loss([loss_curve, epoch_loss_curve], fig_path)
 
                 if global_step % self.cfg.save_steps == 0: # save
                     self.save(f"model_step_{global_step}.pt")
@@ -120,18 +121,20 @@ class Trainer(object):
                 total_acc2, _ = result.summary(1)
                 
                 acc_curve.x.append(global_step)
-                acc_curve.y.append(total_acc)
+                acc_curve.y.append(total_acc.item())
                 logger.success(f'Accuracy: {total_acc:.4%} {total_acc2:.4%}')
                 
                 table = result.table()
                 Result.heatmap(table, f'logs/heatmap/{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
-                table_ratio = table / table.sum(axis=1, keepdims=True)
+                d: int = 1
+                table_ratio = table / table.sum(dim=1, keepdim=True)
                 Result.heatmap(table_ratio, f'logs/heatmap/ratio-{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
             
             epoch_loss_curve.x.append(global_step)
-            epoch_loss_curve.y.append(loss_sum/(i+1))
-            plot_loss([loss_curve, epoch_loss_curve], fig_path)
-            logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum/(i+1)))
+            epoch_loss_curve.y.append(loss_sum / self.cfg.n_epochs)
+            if fig_path:
+                plot_loss([loss_curve, epoch_loss_curve], fig_path)
+            logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum / self.cfg.n_epochs))
         if not self.cfg.save_per_epoch:
             self.save(f"model_step_{global_step}.pt")
 

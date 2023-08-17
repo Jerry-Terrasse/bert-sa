@@ -86,7 +86,6 @@ def main(
     # Class Balance
     weights = {rating: len(train_data)/cnt for rating, cnt in train_data.counter.items()}
     weights = [weights[rating] for rating in train_data.ratings]
-    weights = torch.DoubleTensor(weights)
     sampler = WeightedRandomSampler(weights, len(weights))
     
     train_iter, eval_iter = DataLoader(train_data, batch_size=cfg.batch_size, sampler=sampler), DataLoader(eval_data, batch_size=cfg.eval_batch_size, shuffle=False)
@@ -134,7 +133,7 @@ def main(
         table = result.table()
         Result.heatmap(table, f'{prefix}_heatmap.jpg')
         
-        table_ratio = table / table.sum(axis=1, keepdims=True)
+        table_ratio = table / table.sum(dim=1, keepdim=True)
         Result.heatmap(table_ratio, f'{prefix}_heatmap_ratio.jpg')
     
     else:

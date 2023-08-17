@@ -1,6 +1,8 @@
 import torch
 from matplotlib import pyplot as plt
 
+from typing import Iterable
+
 N = 11
 
 def discriminate(X: torch.Tensor):
@@ -47,7 +49,7 @@ class Result:
         plt.savefig(save_path)
         plt.close()
     @staticmethod
-    def reduce(results: list['Result']):
+    def reduce(results: Iterable['Result']):
         res = Result.empty(next(iter(results)).label.device)
         for result in results:
             res += result
