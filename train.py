@@ -48,6 +48,7 @@ class TomatoConfig(NamedTuple):
     # linearly increasing learning rate from zero to the specified value(5e-5)
     warmup: float = 0.1
     save_steps: int = 100 # interval for saving model
+    tb_flush_steps: int = 100 # interval for flushing log to tensorboard
     save_per_epoch: bool = True # save model per epoch
     total_steps: int = 100000 # total number of steps to train
     train_data: str = 'home_train.json'
@@ -112,6 +113,9 @@ class Trainer(object):
                     plot_loss([loss_curve, epoch_loss_curve], fig_path)
                 writer.add_scalar('loss', loss.item(), global_step)
 
+                if global_step % self.cfg.tb_flush_steps == 0: # flush
+                    writer.flush()
+                
                 if global_step % self.cfg.save_steps == 0: # save
                     self.save(f"model_step_{global_step}.pt")
 
