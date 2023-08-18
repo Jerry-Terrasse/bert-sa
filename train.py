@@ -152,8 +152,8 @@ class Trainer(object):
                 writer.add_image('heatmap_ratio', img, global_step, dataformats='HWC')
             
             epoch_loss_curve.x.append(global_step)
-            epoch_loss_curve.y.append(loss_sum / self.cfg.n_epochs)
-            writer.add_scalar('epoch_loss', loss_sum / self.cfg.n_epochs, global_step)
+            epoch_loss_curve.y.append(loss_sum / len(self.data_iter))
+            writer.add_scalar('epoch_loss', loss_sum / len(self.data_iter), global_step)
             if fig_path:
                 plot_loss([loss_curve, epoch_loss_curve], fig_path)
             logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum / self.cfg.n_epochs))
