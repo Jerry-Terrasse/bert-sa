@@ -160,7 +160,7 @@ class Trainer(object):
             writer.add_scalar('epoch_loss', loss_sum / len(self.data_iter), global_step)
             if fig_path:
                 plot_loss([loss_curve, epoch_loss_curve], fig_path)
-            logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum / self.cfg.n_epochs))
+            logger.info('Epoch %d/%d : Average Loss %5.3f'%(e+1, self.cfg.n_epochs, loss_sum / len(self.data_iter)))
         if not self.cfg.save_per_epoch:
             self.save(f"model_step_{global_step}.pt")
 
