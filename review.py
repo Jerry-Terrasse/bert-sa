@@ -7,6 +7,7 @@ import sys
 import fire
 import json
 from datetime import datetime
+import os
 
 import torch
 import torch.nn as nn
@@ -48,6 +49,7 @@ class Predictor(nn.Module):
         output = self.output(self.predictor(self.drop(pooled_h)))
         return output
 
+@logger.catch(reraise=True)
 def main(
     train_cfg='config/train_tomato.json',
     model_cfg='config/bert_base.json',
@@ -56,19 +58,16 @@ def main(
     pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
     data_parallel=True,
     vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-    save_dir='save/exp1.6',
-    log_dir='logs/tb/exp1.6',
+    save_dir='save/exp1.8',
+    log_dir='logs/tb/exp1.8',
     max_len=100,
     dataset_size=-1, # -1 for full dataset, otherwise for partial dataset for debugging
     mode='train',
     eval_in_train=True,
-    total_steps=-1
 ):
     logger.info(f"{mode} Mode")
 
     train_cfg_dict = json.load(open(train_cfg))
-    if total_steps > 0:
-        train_cfg_dict['total_steps'] = total_steps
     cfg = train.TomatoConfig(**train_cfg_dict)
     
     model_cfg_dict = json.load(open(model_cfg))
@@ -77,9 +76,16 @@ def main(
     logger.info(f"Train Config: {cfg}")
     logger.info(f"Model Config: {model_cfg}")
     logger.info(f"argv: {sys.argv}")
-    logger.debug(f"main args: {train_cfg=} {model_cfg=} {model_file=} {eval_model=} {pretrain_file=} {data_parallel=} {vocab=} {save_dir=} {max_len=} {mode=} {total_steps=}")
+    logger.debug(f"main args: {train_cfg=} {model_cfg=} {model_file=} {eval_model=} {pretrain_file=} {data_parallel=} {vocab=} {save_dir=} {max_len=} {mode=}")
     
     set_seeds(cfg.seed)
+    
+    if not os.path.exists(save_dir):
+        logger.warning(f"save_dir {save_dir} not exists, create it")
+        os.makedirs(save_dir)
+    if not os.path.exists(log_dir):
+        logger.warning(f"log_dir {log_dir} not exists, create it")
+        os.makedirs(log_dir)
     
     train_file = cfg.train_data
     eval_file = cfg.eval_data
@@ -107,6 +113,9 @@ def main(
     logger.info(f"Number of parameters = {sum(p.numel() for p in model.parameters())}, size = {sum(p.numel() * p.element_size() for p in model.parameters()) / 1024 / 1024} MB")
 
     device = get_device()
+    total_steps = cfg.total_steps if cfg.total_steps > 0 else cfg.n_epochs * len(train_iter)
+    train_cfg_dict['total_steps'] = total_steps
+    cfg = train.TomatoConfig(**train_cfg_dict)
     trainer = train.Trainer(cfg,
                             model,
                             train_iter if mode == 'train' else eval_iter,

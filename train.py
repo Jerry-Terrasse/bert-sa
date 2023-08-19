@@ -18,6 +18,7 @@ from loguru import logger
 
 from utils import plot_loss, Curve
 from evaluate import Result
+from optim import BertAdam
 
 from typing import NamedTuple, Callable
 
@@ -56,7 +57,7 @@ class TomatoConfig(NamedTuple):
 
 class Trainer(object):
     """Training Helper Class"""
-    def __init__(self, cfg: TomatoConfig, model, data_iter, optimizer, save_dir, device):
+    def __init__(self, cfg: TomatoConfig, model, data_iter, optimizer: BertAdam, save_dir, device):
         self.cfg = cfg # config for training : see class Config
         self.model = model
         self.data_iter = data_iter # iterator to load data
@@ -113,6 +114,10 @@ class Trainer(object):
                     plot_loss([loss_curve, epoch_loss_curve], fig_path)
                 writer.add_scalar('loss', loss.item(), global_step)
 
+                # lr to tensorboard
+                lr = self.optimizer.get_lr()[0]
+                writer.add_scalar('lr', lr, global_step)
+                
                 if global_step % self.cfg.tb_flush_steps == 0: # flush
                     writer.flush()
                 

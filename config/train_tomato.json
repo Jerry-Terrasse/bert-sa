@@ -7,7 +7,8 @@
     "warmup": 0.1,
     "save_steps": 1000000000,
     "save_per_epoch": true,
-    "total_steps": 1000000,
+    "total_steps": -1,
+    "tb_flush_steps": 100,
     "train_data": "../data/tomato/home_eng_train_.json",
     "eval_data": "../data/tomato/home_eng_eval_.json"
 }
