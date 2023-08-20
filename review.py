@@ -40,7 +40,7 @@ class Predictor(nn.Module):
         self.activ = nn.Tanh()
         self.drop = nn.Dropout(cfg.p_drop_hidden)
         self.predictor = nn.Linear(cfg.dim, 1)
-        self.output = nn.ReLU()
+        self.output = nn.Sigmoid()
     
     def forward(self, input_ids, input_mask):
         segment_ids = torch.zeros_like(input_ids, dtype=torch.long)
@@ -58,8 +58,8 @@ def main(
     pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
     data_parallel=True,
     vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-    save_dir='save/exp1.8',
-    log_dir='logs/tb/exp1.8',
+    save_dir='save/exp1.9',
+    log_dir='logs/tb/exp1.9',
     max_len=100,
     dataset_size=-1, # -1 for full dataset, otherwise for partial dataset for debugging
     mode='train',
