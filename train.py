@@ -157,7 +157,7 @@ class Trainer(object):
                 img = Result.heatmap(table, f'logs/heatmap/{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
                 writer.add_image('heatmap', img, global_step, dataformats='HWC')
                 table_ratio = table / table.sum(dim=1, keepdim=True)
-                img = Result.heatmap(table_ratio, f'logs/heatmap/ratio-{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg')
+                img = Result.heatmap(table_ratio, f'logs/heatmap/ratio-{datetime.now():%Y-%m-%d-%H-%M-%S}.jpg', 0., .6)
                 writer.add_image('heatmap_ratio', img, global_step, dataformats='HWC')
             
             epoch_loss_curve.x.append(global_step)

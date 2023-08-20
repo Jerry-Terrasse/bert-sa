@@ -146,7 +146,7 @@ def main(
         Result.heatmap(table, f'{prefix}_heatmap.jpg')
         
         table_ratio = table / table.sum(dim=1, keepdim=True)
-        Result.heatmap(table_ratio, f'{prefix}_heatmap_ratio.jpg')
+        Result.heatmap(table_ratio, f'{prefix}_heatmap_ratio.jpg', 0., .5)
     
     else:
         logger.error(f'invalid mode: {mode}')

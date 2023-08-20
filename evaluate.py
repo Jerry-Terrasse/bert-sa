@@ -50,13 +50,13 @@ class Result:
         self.loss = optional_cat(self.loss, other.loss) 
         return self
     @staticmethod
-    def heatmap(table_: torch.Tensor, save_path: str) -> np.ndarray:
+    def heatmap(table_: torch.Tensor, save_path: str, vmin: float = None, vmax: float = None) -> np.ndarray:
         assert table_.shape == (N+1, N+1)
         plt.figure(figsize=(N, N))
         plt.xlabel('Predicted Level')
         plt.ylabel('Label Level')
         plt.title('Confusion Matrix')
-        plt.imshow(table_.cpu())
+        plt.imshow(table_.cpu(), vmin=vmin, vmax=vmax) # type: ignore
         plt.colorbar()
         
         with io.BytesIO() as buf:
