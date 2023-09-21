@@ -30,6 +30,7 @@ log_file = f"{prefix}.log"
 logger.add(log_file, colorize=False)
 
 from dataset import TomatoDataset
+from tokenization import load_vocab
 
 class Predictor(nn.Module):
     """ Predict rating from quote """
@@ -48,6 +49,38 @@ class Predictor(nn.Module):
         pooled_h = self.activ(self.fc(h[:, 0]))
         output = self.output(self.predictor(self.drop(pooled_h)))
         return output
+
+def infer(model: nn.Module, model_file: str, data_iter: DataLoader, vocab_file: str, data_parallel: bool, device):
+    model.eval()
+    model.load_state_dict(torch.load(model_file))
+    model.to(device)
+    if data_parallel:
+        model = nn.DataParallel(model)
+    
+    vocab = load_vocab(vocab_file)
+    id2word = {v: k for k, v in vocab.items()}
+    def ids2text(ids: torch.Tensor):
+        return ' '.join([id2word[id] for id in ids.tolist()])
+    
+    logger.info("Start Inference!")
+    preds = []
+    for batch in tqdm(data_iter):
+        _, quote, mask = [x.to(device) for x in batch]
+        with torch.no_grad():
+            prediction = model(quote, mask).reshape(-1)
+        preds.append(prediction.tolist())
+        # for p, q, m in zip(prediction, quote.to('cpu'), mask.to('cpu')):
+        #     breakpoint()
+        #     print(q[m])
+    results = []
+    for pred, batch in zip(preds, data_iter):
+        _, quote, mask = batch
+        result = [
+            (p, ids2text(q[m.bool()]))
+            for p, q, m in zip(pred, quote, mask)
+        ]
+        results.extend(result)
+    return results
 
 @logger.catch(reraise=True)
 def main(
@@ -147,6 +180,10 @@ def main(
         
         table_ratio = table / table.sum(dim=1, keepdim=True)
         Result.heatmap(table_ratio, f'{prefix}_heatmap_ratio.jpg', 0., .5)
+    
+    elif mode == 'infer':
+        result = infer(model, eval_model, eval_iter, vocab, data_parallel, device)
+        json.dump(result, open(f'result.json', 'w'))
     
     else:
         logger.error(f'invalid mode: {mode}')
