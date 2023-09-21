@@ -8,5 +8,5 @@
     "save_steps": 1000,
     "total_steps": 1000000,
     "train_data": "../data/tomato/home_eval_.json",
-    "eval_data": "../data/RYM/rym_1028_eng_.json"
+    "eval_data": "../data/google_play/gp_8481_eng_eval_.json"
 }

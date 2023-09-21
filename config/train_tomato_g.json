@@ -1,0 +1,14 @@
+{
+    "seed": 42,
+    "batch_size": 32,
+    "eval_batch_size": 32,
+    "lr": 2e-5,
+    "n_epochs": 10,
+    "warmup": 0.1,
+    "save_steps": 1000000000,
+    "save_per_epoch": true,
+    "total_steps": -1,
+    "tb_flush_steps": 100,
+    "train_data": "../data/tomato/home_g_eng_train_.json",
+    "eval_data": "../data/tomato/home_eng_eval_.json"
+}

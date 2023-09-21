@@ -58,8 +58,8 @@ def main(
     pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
     data_parallel=True,
     vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-    save_dir='save/exp1.9',
-    log_dir='logs/tb/exp1.9',
+    save_dir='save/exp1.10',
+    log_dir='logs/tb/exp1.10',
     max_len=100,
     dataset_size=-1, # -1 for full dataset, otherwise for partial dataset for debugging
     mode='train',
