@@ -13,20 +13,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-try:
-    import models
-    import optim
-    import train
-    
-    from utils import set_seeds, get_device, truncate_tokens_pair
-    from evaluate import Result
-except ModuleNotFoundError:
-    from . import models
-    from . import optim
-    from . import train
-    
-    from .utils import set_seeds, get_device, truncate_tokens_pair
-    from .evaluate import Result
+import models
+import optim
+import train
+
+from utils import set_seeds, get_device, truncate_tokens_pair
+from evaluate import Result
 
 from tqdm import tqdm
 from loguru import logger
