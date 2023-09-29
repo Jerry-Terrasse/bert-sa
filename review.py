@@ -22,12 +22,13 @@ from evaluate import Result
 
 from tqdm import tqdm
 from loguru import logger
-logger.remove()
-logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
-title = sys.argv[0].split("/")[-1].split(".")[0]
-prefix = f"logs/{title}-{datetime.now():%Y-%m-%d-%H-%M-%S}"
-log_file = f"{prefix}.log"
-logger.add(log_file, colorize=False)
+if __name__ == '__main__':
+    logger.remove()
+    logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
+    title = sys.argv[0].split("/")[-1].split(".")[0]
+    prefix = f"logs/{title}-{datetime.now():%Y-%m-%d-%H-%M-%S}"
+    log_file = f"{prefix}.log"
+    logger.add(log_file, colorize=False)
 
 from dataset import TomatoDataset
 from tokenization import load_vocab
@@ -41,7 +42,7 @@ class Predictor(nn.Module):
         self.activ = nn.Tanh()
         self.drop = nn.Dropout(cfg.p_drop_hidden)
         self.predictor = nn.Linear(cfg.dim, 1)
-        self.output = nn.Sigmoid()
+        self.output = nn.ReLU()
     
     def forward(self, input_ids, input_mask):
         segment_ids = torch.zeros_like(input_ids, dtype=torch.long)
@@ -84,15 +85,15 @@ def infer(model: nn.Module, model_file: str, data_iter: DataLoader, vocab_file: 
 
 @logger.catch(reraise=True)
 def main(
-    train_cfg='config/train_tomato.json',
+    train_cfg='config/train_tomato_g.json',
     model_cfg='config/bert_base.json',
     model_file=None,
     eval_model='save/model_steps_18000.pt',
     pretrain_file='../data/BERT_pretrained/uncased_L-12_H-768_A-12/bert_model.ckpt',
     data_parallel=True,
     vocab='../data/BERT_pretrained/uncased_L-12_H-768_A-12/vocab.txt',
-    save_dir='save/exp1.10',
-    log_dir='logs/tb/exp1.10',
+    save_dir='save/exp1.11',
+    log_dir='logs/tb/exp1.11',
     max_len=100,
     dataset_size=-1, # -1 for full dataset, otherwise for partial dataset for debugging
     mode='train',
